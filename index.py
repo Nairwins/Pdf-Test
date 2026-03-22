@@ -2,7 +2,7 @@ import sys, json, base64
 sys.path.insert(0, '/home/claude')
 
 from flask import Flask, request, render_template, jsonify
-from fire import generate_resume_pdf
+from firestar import generate_resume_pdf
 
 # ── DOCX import ───────────────────────────────────────────────────────────────
 import os, importlib.util
