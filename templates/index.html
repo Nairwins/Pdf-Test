@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ResuFlow</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0c0c0e; --surface:#131316; --panel:#18181c; --border:#26262d;
+    --text:#e2e2e8; --muted:#5a5a6e; --accent:#4f6ef7; --accent-h:#3b5ce4;
+    --error:#f87171; --success:#34d399;
+  }
+  *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+
+  /* TOP BAR */
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:0 20px;height:48px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;gap:12px;}
+  .brand{font-size:14px;font-weight:700;letter-spacing:-0.02em;white-space:nowrap;}
+  .brand em{color:var(--accent);font-style:normal;}
+  .color-row{display:flex;align-items:center;gap:7px;}
+  .color-label{font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace;}
+  #accent-color{width:26px;height:26px;border-radius:50%;border:2px solid var(--border);cursor:pointer;padding:0;background:none;overflow:hidden;}
+  .color-presets{display:flex;gap:4px;}
+  .cp{width:14px;height:14px;border-radius:50%;cursor:pointer;border:1.5px solid transparent;transition:transform .1s;}
+  .cp:hover{transform:scale(1.25);}
+  .cp.active{border-color:#fff;}
+  .topbar-right{display:flex;align-items:center;gap:8px;}
+  .btn{border:none;cursor:pointer;border-radius:6px;font-family:'Inter',sans-serif;font-weight:500;font-size:12px;padding:7px 14px;transition:background .15s;display:flex;align-items:center;gap:5px;white-space:nowrap;}
+  .btn-primary{background:var(--accent);color:#fff;}
+  .btn-primary:hover{background:var(--accent-h);}
+  .btn-dl{background:#16a34a;color:#fff;display:none;}
+  .btn-dl:hover{background:#15803d;}
+  .btn-dl-docx{background:#0369a1;color:#fff;display:none;}
+  .btn-dl-docx:hover{background:#0284c7;}
+  .btn-edit{background:#7c3aed;color:#fff;display:none;}
+  .btn-edit:hover{background:#6d28d9;}
+  .btn-edit.active{background:#dc2626;}
+  .btn-edit.active:hover{background:#b91c1c;}
+  .btn-icon{background:var(--panel);color:var(--text);border:1px solid var(--border);padding:6px 10px;font-size:14px;}
+  .btn-icon:hover{background:var(--border);}
+  .btn-icon:disabled{opacity:.35;cursor:default;}
+
+  /* MAIN */
+  .main{display:grid;grid-template-columns:380px 1fr;flex:1;overflow:hidden;}
+
+  /* EDITOR */
+  .editor-pane{display:flex;flex-direction:column;border-right:1px solid var(--border);overflow:hidden;}
+  .pane-bar{display:flex;align-items:center;justify-content:space-between;padding:8px 14px;border-bottom:1px solid var(--border);background:var(--panel);flex-shrink:0;}
+  .pane-bar-title{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;}
+  .dots{display:flex;gap:5px;}
+  .dot{width:9px;height:9px;border-radius:50%;}
+  .dr{background:#ef4444;}.dy{background:#f59e0b;}.dg{background:#22c55e;}
+  #json-input{flex:1;background:var(--bg);border:none;outline:none;resize:none;padding:16px;font-family:'JetBrains Mono',monospace;font-size:11px;color:#a8b4d0;line-height:1.75;tab-size:2;overflow-y:auto;}
+  #json-input::placeholder{color:#2a2a38;}
+  .editor-footer{display:flex;align-items:center;gap:10px;padding:10px 14px;border-top:1px solid var(--border);background:var(--panel);flex-shrink:0;}
+  #error-msg{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--error);display:none;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .spacer{flex:1;}
+
+  /* PREVIEW */
+  .preview-pane{display:flex;flex-direction:column;background:#2a2a2e;overflow:hidden;}
+  /* Slim viewer toolbar above the scroll area */
+  .viewer-bar{
+    display:none;
+    align-items:center;justify-content:center;
+    padding:6px 16px;gap:8px;
+    border-bottom:1px solid #1a1a1e;
+    background:#1a1a1e;
+    flex-shrink:0;
+  }
+  .viewer-bar.visible{display:flex;}
+  .viewer-bar-zoom{display:flex;align-items:center;gap:6px;}
+  .zoom-label-bar{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);min-width:40px;text-align:center;}
+  .page-indicator-bar{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);padding-left:12px;border-left:1px solid var(--border);}
+
+
+
+
+  /* SCROLL AREA — contains all page wrappers stacked vertically */
+  .preview-scroll{flex:1;overflow:auto;padding:24px 0;display:flex;flex-direction:column;align-items:center;gap:16px;background:#2a2a2e;}
+
+  /* Each page: canvas + zone overlay */
+  .page-container{position:relative;flex-shrink:0;box-shadow:0 4px 24px rgba(0,0,0,.6);}
+  .page-container canvas{display:block;}
+  .page-overlay{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;}
+  .page-overlay.edit-mode{pointer-events:all;}
+
+  /* Zone hit areas */
+  .zone-hit{position:absolute;cursor:pointer;border-radius:2px;pointer-events:none;transition:background .1s,outline .1s;}
+  .edit-mode .zone-hit{pointer-events:all;}
+  .zone-hit:hover{background:rgba(79,110,247,.2);outline:1.5px solid rgba(79,110,247,.8);}
+  .zone-hit.flashing{animation:flash .35s ease;}
+  @keyframes flash{0%{background:rgba(79,110,247,.5);}100%{background:transparent;}}
+
+  /* Placeholder */
+  .placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;width:100%;gap:10px;color:#5a5a6e;}
+  .placeholder svg{opacity:.25;}
+  .placeholder p{font-family:'JetBrains Mono',monospace;font-size:11px;color:#4a4a5e;}
+
+  /* Popover */
+  #popover{position:fixed;z-index:9999;background:#1a1a24;border:1.5px solid var(--accent);border-radius:12px;padding:20px;min-width:420px;max-width:560px;box-shadow:0 12px 48px rgba(0,0,0,.75);display:none;}
+  #popover.show{display:block;}
+  #popover-label{font-size:11px;color:var(--accent);font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;font-weight:600;}
+  #popover-input{width:100%;background:#0c0c14;border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:13px;padding:12px 14px;outline:none;resize:vertical;min-height:64px;line-height:1.6;transition:border-color .15s;}
+  #popover-input:focus{border-color:var(--accent);}
+  .popover-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:14px;}
+  .pop-btn{border:none;cursor:pointer;border-radius:7px;font-size:12px;font-weight:600;padding:9px 20px;font-family:'Inter',sans-serif;}
+  .pop-cancel{background:#2a2a36;color:var(--muted);}
+  .pop-cancel:hover{background:#36364a;color:var(--text);}
+  .pop-save{background:var(--accent);color:#fff;font-size:13px;padding:9px 24px;}
+  .pop-save:hover{background:var(--accent-h);}
+
+  /* Image import button */
+  .btn-img{background:#b45309;color:#fff;display:none;}
+  .btn-img:hover{background:#92400e;}
+  .btn-img.active-mode{display:flex;}
+
+  /* Draggable image overlays on canvases */
+  .pdf-img-overlay{
+    position:absolute;cursor:move;
+    border:2px solid transparent;
+    box-sizing:border-box;user-select:none;
+  }
+  .pdf-img-overlay img{
+    width:100%;height:100%;display:block;
+    pointer-events:none;
+    object-fit:fill;
+  }
+  /* Staging = orange dashed = not yet baked */
+  .edit-mode .pdf-img-overlay.staging{
+    border:2px dashed rgba(255,165,0,.8);
+  }
+  /* Committed = thin accent outline so user can see/click it */
+  .edit-mode .pdf-img-overlay.committed{
+    border:2px solid rgba(79,110,247,.4);
+  }
+  .edit-mode .pdf-img-overlay:hover{
+    border-color:rgba(255,165,0,1) !important;
+  }
+  .edit-mode .pdf-img-overlay.selected{
+    border:2px solid rgba(255,165,0,1);
+    outline:1px solid rgba(255,165,0,.3);
+  }
+  /* Resize handle — bottom-right corner */
+  .img-resize-handle{
+    position:absolute;bottom:-6px;right:-6px;
+    width:14px;height:14px;
+    background:#f59e0b;border-radius:2px;cursor:se-resize;display:none;
+  }
+  .edit-mode .pdf-img-overlay:hover .img-resize-handle,
+  .edit-mode .pdf-img-overlay.selected .img-resize-handle{display:block;}
+  /* Delete × button */
+  .img-delete-btn{
+    position:absolute;top:-10px;right:-10px;
+    width:20px;height:20px;
+    background:#dc2626;color:#fff;
+    border-radius:50%;border:none;cursor:pointer;
+    font-size:13px;line-height:20px;text-align:center;display:none;
+  }
+  .edit-mode .pdf-img-overlay.selected .img-delete-btn{display:block;}
+  /* Apply button */
+  .img-validate-btn{
+    position:absolute;bottom:-28px;left:50%;transform:translateX(-50%);
+    background:#16a34a;color:#fff;border:none;cursor:pointer;
+    border-radius:5px;font-size:10px;font-weight:600;padding:4px 12px;
+    white-space:nowrap;display:none;font-family:'Inter',sans-serif;z-index:10;
+  }
+  .edit-mode .pdf-img-overlay.selected .img-validate-btn{display:block;}
+
+  /* Loading */
+  #loading{display:none;position:fixed;inset:0;background:rgba(12,12,14,.65);backdrop-filter:blur(3px);z-index:100;align-items:center;justify-content:center;flex-direction:column;gap:12px;}
+  #loading.show{display:flex;}
+  .spinner{width:28px;height:28px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  #loading p{font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace;}
+</style>
+</head>
+<body>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+</script>
+
+<div id="loading"><div class="spinner"></div><p id="loading-msg">Generating…</p></div>
+
+<div id="popover">
+  <div id="popover-label">Field</div>
+  <textarea id="popover-input" rows="3"></textarea>
+  <div class="popover-actions">
+    <button class="pop-btn pop-cancel" id="pop-cancel">Cancel</button>
+    <button class="pop-btn pop-save" id="pop-save">Save ↵</button>
+  </div>
+</div>
+
+<div class="topbar">
+  <div class="brand">Resu<em>Flow</em></div>
+  <div class="color-row">
+    <span class="color-label">accent</span>
+    <input type="color" id="accent-color" value="#1a56db">
+    <div class="color-presets">
+      <div class="cp active" style="background:#1a56db" data-color="#1a56db"></div>
+      <div class="cp" style="background:#00897B" data-color="#00897B"></div>
+      <div class="cp" style="background:#7c3aed" data-color="#7c3aed"></div>
+      <div class="cp" style="background:#b91c1c" data-color="#b91c1c"></div>
+      <div class="cp" style="background:#111111" data-color="#111111"></div>
+      <div class="cp" style="background:#0e7490" data-color="#0e7490"></div>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <div class="edit-hint" id="edit-hint" style="font-size:10px;color:#7c3aed;font-family:'JetBrains Mono',monospace;display:none;"></div>
+    <button class="btn btn-edit" id="edit-btn">✏ Click to Edit</button>
+    <button class="btn btn-img" id="img-btn" title="Add image to PDF">🖼 Add Image</button>
+    <input type="file" id="img-file-input" accept="image/*" style="display:none">
+    <button class="btn btn-dl" id="dl-btn">⬇ PDF</button>
+    <button class="btn btn-dl-docx" id="dl-docx-btn">⬇ DOCX</button>
+    <button class="btn btn-primary" id="gen-btn">▶ Generate</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="editor-pane">
+    <div class="pane-bar">
+      <div class="dots"><span class="dot dr"></span><span class="dot dy"></span><span class="dot dg"></span></div>
+      <div class="pane-bar-title">resume.json</div>
+      <div></div>
+    </div>
+    <textarea id="json-input" spellcheck="false" placeholder='{
+  "name": "Your Name",
+  "title": "Job Title",
+  "seniority_level": "Senior",
+  "contact": {
+    "email": "you@example.com",
+    "phone": "+1 555 000 0000",
+    "location": "City, Country",
+    "linkedin": "linkedin.com/in/you",
+    "website": "yoursite.com",
+    "github": "github.com/you"
+  },
+  "summary": "...",
+  "experience": [
+    {
+      "company": "Acme Corp",
+      "location": "Remote",
+      "role": "Engineer",
+      "start_date": "Jan 2022",
+      "end_date": "Present",
+      "duration": "2 years",
+      "description": ["Built X", "Led Y"]
+    }
+  ],
+  "projects": [
+    {
+      "name": "My Project",
+      "links": "github.com/you/proj",
+      "description": ["Built Z"]
+    }
+  ],
+  "hardskills": {
+    "Languages": ["Python", "JS"],
+    "Tools": ["Git", "Docker"]
+  },
+  "softskills": ["Communication"],
+  "languages": ["English (Native)"],
+  "education": [
+    {
+      "institution": "MIT",
+      "degree": "Bachelor of Science",
+      "field": "Computer Science",
+      "start_date": "Sep 2014",
+      "end_date": "Jun 2018",
+      "gpa": "3.9",
+      "state": ""
+    }
+  ],
+  "certifications": ["AWS Certified"],
+  "publications": [],
+  "awards": [],
+  "others": {}
+}'></textarea>
+    <div class="editor-footer">
+      <span id="error-msg"></span>
+      <div class="spacer"></div>
+    </div>
+  </div>
+
+  <div class="preview-pane">
+
+
+    <!-- Slim viewer bar: zoom + page indicator -->
+    <div class="viewer-bar" id="viewer-bar">
+      <div class="viewer-bar-zoom">
+        <button class="btn btn-icon" id="zoom-out" style="padding:4px 9px;font-size:13px;">−</button>
+        <span class="zoom-label-bar" id="zoom-label">150%</span>
+        <button class="btn btn-icon" id="zoom-in"  style="padding:4px 9px;font-size:13px;">+</button>
+        <button class="btn btn-icon" id="zoom-fit" style="font-size:10px;padding:4px 8px;" title="Fit to width">⊡</button>
+      </div>
+      <span class="page-indicator-bar" id="page-indicator"></span>
+    </div>
+    <div class="preview-scroll" id="preview-scroll">
+      <div class="placeholder" id="placeholder">
+        <svg width="56" height="72" viewBox="0 0 56 72" fill="none">
+          <rect x="2" y="2" width="52" height="68" rx="4" stroke="#6a6a7e" stroke-width="2"/>
+          <line x1="12" y1="20" x2="44" y2="20" stroke="#6a6a7e" stroke-width="2" stroke-linecap="round"/>
+          <line x1="12" y1="30" x2="44" y2="30" stroke="#6a6a7e" stroke-width="1.5" stroke-linecap="round"/>
+          <line x1="12" y1="38" x2="36" y2="38" stroke="#6a6a7e" stroke-width="1.5" stroke-linecap="round"/>
+          <line x1="12" y1="46" x2="40" y2="46" stroke="#6a6a7e" stroke-width="1.5" stroke-linecap="round"/>
+          <line x1="12" y1="54" x2="32" y2="54" stroke="#6a6a7e" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        <p>Paste JSON → click Generate</p>
+      </div>
+      <!-- Page containers injected here by JS -->
+    </div>
+  </div>
+</div>
+
+<script>
+// ── STATE ──────────────────────────────────────────────────────────────────
+let resumeData  = null;
+let currentB64  = null;
+let currentFile = 'resume.pdf';
+let zones       = [];
+let pdfNativeW  = 595.28;
+let pdfNativeH  = 841.89;
+let numPages    = 1;
+let editMode    = false;
+let activeZone  = null;
+let pdfDoc      = null;   // PDF.js document object, kept for re-renders
+// Zoom: logical scale (1.0 = 100%). We render at logicalScale * DPR for high-DPI.
+let logicalScale = 1.5;   // default: 150% feels like a comfortable reading size
+const DPR = Math.min(window.devicePixelRatio || 1, 3); // cap at 3x for performance
+const ZOOM_STEPS = [0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0, 2.5, 3.0];
+
+const $ = id => document.getElementById(id);
+
+// ── COLOR ──────────────────────────────────────────────────────────────────
+document.querySelectorAll('.cp').forEach(el => {
+  el.addEventListener('click', () => {
+    document.querySelectorAll('.cp').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    $('accent-color').value = el.dataset.color;
+  });
+});
+$('accent-color').addEventListener('input', () => {
+  document.querySelectorAll('.cp').forEach(c => c.classList.remove('active'));
+});
+
+// ── GENERATE ───────────────────────────────────────────────────────────────
+$('gen-btn').addEventListener('click', generate);
+$('json-input').addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') generate();
+});
+
+async function generate() {
+  const text = $('json-input').value.trim();
+  if (!text) { showError('Paste your JSON first.'); return; }
+  let parsed;
+  try { parsed = JSON.parse(text); }
+  catch(e) { showError('JSON error: ' + e.message); return; }
+  clearError();
+  resumeData = parsed;
+  await renderPdf(resumeData);
+}
+
+async function renderPdf(data) {
+  showLoading(true, 'Generating PDF…');
+  try {
+    const color = $('accent-color').value;
+    const res = await fetch('/render-pdf', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data, color })
+    });
+    const result = await res.json();
+    if (!result.success) { showError(result.error); return; }
+    applyResult(result);
+  } catch(e) { showError('Error: ' + e.message); }
+  finally { showLoading(false); }
+}
+
+function applyResult(result) {
+  currentB64  = result.pdf_b64;
+  currentFile = result.filename;
+  zones       = result.zones || [];
+  pdfNativeW  = result.pdf_w || 595.28;
+  pdfNativeH  = result.pdf_h || 841.89;
+  numPages    = result.num_pages || 1;
+  resumeData  = result.data || resumeData;
+
+  $('json-input').value = JSON.stringify(resumeData, null, 2);
+  $('dl-btn').style.display      = 'flex';
+  $('dl-docx-btn').style.display = 'flex';
+  $('edit-btn').style.display    = 'flex';
+  $('viewer-bar').classList.add('visible');
+
+  // If we have image overlays active, preserve them during re-render
+  // (don't destroy and re-add — that would break staging state)
+  const hasOverlays = document.querySelector('.pdf-img-overlay') !== null;
+  if (hasOverlays) {
+    // Re-render canvases only; keep overlays in place
+    displayPdfKeepOverlays(currentB64);
+  } else {
+    displayPdf(currentB64);
+  }
+}
+
+// Re-render PDF canvas without touching image overlays
+async function displayPdfKeepOverlays(b64) {
+  showLoading(true, 'Rendering…');
+  try {
+    pdfDoc = await pdfjsLib.getDocument({ data: b64ToBytes(b64) }).promise;
+    // Re-render each page canvas without clearing overlays
+    const scroll = $('preview-scroll');
+    const containers = scroll.querySelectorAll('.page-container');
+    const totalPages = pdfDoc.numPages;
+    const logW = Math.round(pdfNativeW * logicalScale);
+    const logH = Math.round(pdfNativeH * logicalScale);
+    const physW = Math.round(logW * DPR);
+    const physH = Math.round(logH * DPR);
+    const renderScale = physW / pdfNativeW;
+
+    for (let i = 0; i < totalPages; i++) {
+      const pageNum = i + 1;
+      const page = await pdfDoc.getPage(pageNum);
+      const vp = page.getViewport({ scale: renderScale });
+      // Find or create container
+      let container = scroll.querySelector(`.page-container[data-page="${pageNum}"]`);
+      if (!container) {
+        // Page count changed — fall back to full re-render
+        await displayPdf(b64);
+        return;
+      }
+      const canvas = container.querySelector('canvas');
+      canvas.width  = physW; canvas.height = physH;
+      await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
+      // Update zone hit areas only (not image overlays)
+      const overlay = container.querySelector('.page-overlay');
+      overlay.querySelectorAll('.zone-hit').forEach(z => z.remove());
+      // Update pointer events on overlay
+      overlay.className = 'page-overlay' + (editMode ? ' edit-mode' : '');
+      zones.filter(z => (z.page || 1) === pageNum).forEach(z => {
+        const div = document.createElement('div');
+        div.className = 'zone-hit';
+        div.dataset.zid = z.id;
+        div.style.left   = (z.x * logicalScale) + 'px';
+        div.style.top    = ((pdfNativeH - z.y - z.h) * logicalScale) + 'px';
+        div.style.width  = (z.w * logicalScale) + 'px';
+        div.style.height = (z.h * logicalScale) + 'px';
+        div.title = z.label;
+        div.addEventListener('click', ev => {
+          if (!editMode) return;
+          ev.stopPropagation();
+          openPopover(z, div, ev);
+        });
+        overlay.appendChild(div);
+      });
+    }
+    updateUI();
+  } catch(e) { showError('Render error: ' + e.message); }
+  finally { showLoading(false); }
+}
+
+// ── PDF DISPLAY ────────────────────────────────────────────────────────────
+// Strategy:
+//   - Decode PDF bytes, load with PDF.js
+//   - For each page: create a .page-container div with a <canvas> + overlay div
+//   - Render into a HIGH-DPI canvas: physical pixels = logicalScale * DPR
+//     CSS size = logicalScale * pdfNativeW  (logical pixels)
+//     Canvas internal size = logicalScale * DPR * pdfNativeW  (physical pixels)
+//   - Zone overlays use logical pixels (matching CSS size), so touch/click coords work
+//
+async function displayPdf(b64) {
+  showLoading(true, 'Rendering…');
+  try {
+    const raw   = atob(b64);
+    const bytes = new Uint8Array(raw.length);
+    for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+
+    pdfDoc = await pdfjsLib.getDocument({ data: bytes }).promise;
+
+    await renderAllPages();
+
+  } catch(e) {
+    showError('PDF render error: ' + e.message);
+    console.error(e);
+  } finally {
+    showLoading(false);
+  }
+}
+
+async function renderAllPages() {
+  const scroll = $('preview-scroll');
+
+  // Remove all existing page containers
+  scroll.querySelectorAll('.page-container').forEach(el => el.remove());
+  $('placeholder').style.display = 'none';
+
+  const totalPages = pdfDoc.numPages;
+  numPages = totalPages;
+
+  // Logical (CSS) width at current zoom
+  const logW = Math.round(pdfNativeW * logicalScale);
+  const logH = Math.round(pdfNativeH * logicalScale);
+
+  // Physical canvas size (high-DPI)
+  const physW = Math.round(logW * DPR);
+  const physH = Math.round(logH * DPR);
+
+  // The PDF.js renderScale needed to produce physW pixels from pdfNativeW pts
+  const renderScale = physW / pdfNativeW;
+
+  for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+    const page = await pdfDoc.getPage(pageNum);
+    const vp   = page.getViewport({ scale: renderScale });
+
+    // Container
+    const container = document.createElement('div');
+    container.className = 'page-container';
+    container.dataset.page = pageNum;
+    container.style.width  = logW + 'px';
+    container.style.height = logH + 'px';
+
+    // High-DPI canvas
+    const canvas = document.createElement('canvas');
+    canvas.width  = physW;
+    canvas.height = physH;
+    canvas.style.width  = logW + 'px';
+    canvas.style.height = logH + 'px';
+
+    // Render
+    await page.render({
+      canvasContext: canvas.getContext('2d'),
+      viewport: vp
+    }).promise;
+
+    // Zone overlay (logical size — zones are positioned in logical px)
+    const overlay = document.createElement('div');
+    overlay.className = 'page-overlay' + (editMode ? ' edit-mode' : '');
+    overlay.style.width  = logW + 'px';
+    overlay.style.height = logH + 'px';
+
+    // Add zone hit areas for this page
+    const pageZones = zones.filter(z => (z.page || 1) === pageNum);
+    pageZones.forEach(z => {
+      const div = document.createElement('div');
+      div.className = 'zone-hit';
+      div.dataset.zid = z.id;
+
+      // Convert PDF pts → logical CSS px
+      // ReportLab: origin bottom-left, y up
+      // Screen: origin top-left, y down
+      const lx = z.x * logicalScale;
+      const ly = (pdfNativeH - z.y - z.h) * logicalScale;
+      const lw = z.w * logicalScale;
+      const lh = z.h * logicalScale;
+
+      div.style.left   = lx + 'px';
+      div.style.top    = ly + 'px';
+      div.style.width  = lw + 'px';
+      div.style.height = lh + 'px';
+      div.title = z.label;
+
+      div.addEventListener('click', e => {
+        if (!editMode) return;
+        e.stopPropagation();
+        openPopover(z, div, e);
+      });
+
+      overlay.appendChild(div);
+    });
+
+    container.appendChild(canvas);
+    container.appendChild(overlay);
+    scroll.appendChild(container);
+  }
+
+  updateUI();
+  setupScrollIndicator();
+  restoreImageOverlays();
+}
+
+function updateUI() {
+  $('zoom-label').textContent = Math.round(logicalScale * 100) + '%';
+  const totalPages = pdfDoc ? pdfDoc.numPages : 1;
+  if (totalPages > 1) {
+    $('page-indicator').textContent = `1 / ${totalPages}`;
+  } else {
+    $('page-indicator').textContent = '';
+  }
+  $('zoom-out').disabled = logicalScale <= ZOOM_STEPS[0];
+  $('zoom-in').disabled  = logicalScale >= ZOOM_STEPS[ZOOM_STEPS.length-1];
+}
+
+// ── SCROLL PAGE INDICATOR ─────────────────────────────────────────────────
+function setupScrollIndicator() {
+  if (!pdfDoc || pdfDoc.numPages <= 1) return;
+  const scroll = $('preview-scroll');
+  scroll.addEventListener('scroll', onScroll, { passive: true });
+}
+
+function onScroll() {
+  const scroll = $('preview-scroll');
+  const containers = scroll.querySelectorAll('.page-container');
+  if (!containers.length) return;
+  const scrollTop = scroll.scrollTop + scroll.clientHeight / 2;
+  let currentPage = 1;
+  containers.forEach(c => {
+    if (c.offsetTop <= scrollTop) currentPage = parseInt(c.dataset.page);
+  });
+  const total = pdfDoc ? pdfDoc.numPages : 1;
+  $('page-indicator').textContent = total > 1 ? `${currentPage} / ${total}` : '';
+}
+
+// ── ZOOM ───────────────────────────────────────────────────────────────────
+$('zoom-in').addEventListener('click', () => zoomTo(nextZoom(1)));
+$('zoom-out').addEventListener('click', () => zoomTo(nextZoom(-1)));
+$('zoom-fit').addEventListener('click', () => {
+  const scroll = $('preview-scroll');
+  const fitScale = (scroll.clientWidth - 48) / pdfNativeW;
+  // Snap to nearest ZOOM_STEPS or use exact fit
+  zoomTo(fitScale);
+});
+
+// Ctrl+scroll to zoom
+$('preview-scroll').addEventListener('wheel', e => {
+  if (e.ctrlKey || e.metaKey) {
+    e.preventDefault();
+    zoomTo(nextZoom(e.deltaY < 0 ? 1 : -1));
+  }
+}, { passive: false });
+
+function nextZoom(dir) {
+  const idx = ZOOM_STEPS.findIndex(s => s >= logicalScale - 0.001);
+  const next = idx + dir;
+  return ZOOM_STEPS[Math.max(0, Math.min(ZOOM_STEPS.length - 1, next))];
+}
+
+async function zoomTo(scale) {
+  if (!pdfDoc) return;
+  logicalScale = scale;
+  showLoading(true, 'Zooming…');
+  try {
+    await renderAllPages();
+  } finally {
+    showLoading(false);
+  }
+}
+
+// ── EDIT MODE ──────────────────────────────────────────────────────────────
+$('edit-btn').addEventListener('click', () => {
+  editMode = !editMode;
+  const btn  = $('edit-btn');
+  const hint = $('edit-hint');
+
+  btn.textContent = editMode ? '✕ Exit Edit Mode' : '✏ Click to Edit';
+  btn.classList.toggle('active', editMode);
+  // Show overlays for all images when entering edit mode
+  if (editMode && resumeData?.others?.images?.length) {
+    if (!document.querySelector('.pdf-img-overlay')) {
+      resumeData.others.images.forEach((img, idx) => {
+        const state = committedImages.has(idx) ? 'committed' : 'staging';
+        addImageOverlay(img, idx, state);
+      });
+    }
+  }
+  hint.style.display = editMode ? 'block' : 'none'; hint.textContent = editMode ? '🖱 Click text to edit' : '';
+  $('img-btn').classList.toggle('active-mode', editMode);
+  if (!editMode) {
+    closePopover();
+    discardStagingImages();
+    // Hide all overlays when leaving edit mode
+    document.querySelectorAll('.pdf-img-overlay').forEach(el => el.remove());
+  }
+
+  document.querySelectorAll('.page-overlay').forEach(el => {
+    el.classList.toggle('edit-mode', editMode);
+  });
+  document.querySelectorAll('.zone-hit').forEach(el => {
+    el.style.pointerEvents = editMode ? 'all' : 'none';
+  });
+});
+
+// ── POPOVER ────────────────────────────────────────────────────────────────
+function openPopover(zone, hitEl, mouseEvent) {
+  activeZone = zone;
+  $('popover-label').textContent = zone.label;
+  $('popover-input').value = zone.value;
+
+  const vw = window.innerWidth, vh = window.innerHeight;
+  let px = mouseEvent.clientX + 14;
+  let py = mouseEvent.clientY + 8;
+  if (px + 560 > vw) px = mouseEvent.clientX - 572;
+  if (py + 200 > vh) py = mouseEvent.clientY - 200;
+  $('popover').style.left = Math.max(8, px) + 'px';
+  $('popover').style.top  = Math.max(8, py) + 'px';
+  $('popover').classList.add('show');
+
+  setTimeout(() => { $('popover-input').focus(); $('popover-input').select(); }, 30);
+  hitEl.classList.add('flashing');
+  setTimeout(() => hitEl.classList.remove('flashing'), 400);
+}
+
+function closePopover() {
+  $('popover').classList.remove('show');
+  activeZone = null;
+}
+
+$('pop-cancel').addEventListener('click', closePopover);
+$('pop-save').addEventListener('click', saveEdit);
+$('popover-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveEdit(); }
+  if (e.key === 'Escape') closePopover();
+});
+document.addEventListener('click', e => {
+  if ($('popover').classList.contains('show') && !$('popover').contains(e.target)) closePopover();
+});
+
+async function saveEdit() {
+  if (!activeZone || !resumeData) return;
+  const value = $('popover-input').value;
+  const path  = activeZone.path;
+  closePopover();
+
+
+  showLoading(true, 'Applying edit…');
+  try {
+    const color = $('accent-color').value;
+    const res = await fetch('/edit-field', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data: resumeData, path, value, color })
+    });
+    const result = await res.json();
+    if (!result.success) { showError(result.error); return; }
+    applyResult(result);
+  } catch(e) { showError('Error: ' + e.message); }
+  finally { showLoading(false); }
+}
+
+// ── DOWNLOAD PDF ───────────────────────────────────────────────────────────
+$('dl-btn').addEventListener('click', () => {
+  if (!currentB64) return;
+  const raw = atob(currentB64);
+  const arr = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
+  const blob = new Blob([arr], { type: 'application/pdf' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = currentFile;
+  a.click();
+});
+
+// ── DOWNLOAD DOCX ─────────────────────────────────────────────────────────
+$('dl-docx-btn').addEventListener('click', async () => {
+  if (!resumeData) return;
+  showLoading(true, 'Generating DOCX…');
+  try {
+    const color = $('accent-color').value;
+    const res   = await fetch('/render-docx', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ data: resumeData, color }),
+    });
+    const result = await res.json();
+    if (!result.success) { showError(result.error); return; }
+
+    const raw = atob(result.docx_b64);
+    const arr = new Uint8Array(raw.length);
+    for (let i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
+    const blob = new Blob([arr], {
+      type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    });
+    const a = document.createElement('a');
+    a.href     = URL.createObjectURL(blob);
+    a.download = result.filename;
+    a.click();
+  } catch(e) { showError('DOCX error: ' + e.message); }
+  finally { showLoading(false); }
+});
+
+// ── IMAGE IMPORT ───────────────────────────────────────────────────────────
+//
+// State machine per image (tracked by index in resumeData.others.images):
+//   "staging"   — new/moved, not baked into PDF canvas yet
+//   "committed" — baked into canvas; overlay shown so user can re-select to reposition
+//
+// committedImages = Set of indices that are baked into the current canvas render.
+// stagingImages   = Set of indices currently in staging state.
+// newlyAddedImages = indices added this session, never committed (for discard on cancel).
+
+let committedImages  = new Set();
+let stagingImages    = new Set();
+let newlyAddedImages = new Set();
+
+$('img-btn').addEventListener('click', () => $('img-file-input').click());
+
+$('img-file-input').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file || !resumeData) return;
+  e.target.value = '';
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const b64 = ev.target.result.split(',')[1];
+    const S = 100; // square: w=h=100pt
+    const imgObj = {
+      src_b64: b64,
+      x: (pdfNativeW - S) / 2,
+      y: (pdfNativeH - S) / 2,
+      w: S, h: S, page: 1
+    };
+    if (!resumeData.others) resumeData.others = {};
+    if (!resumeData.others.images) resumeData.others.images = [];
+    resumeData.others.images.push(imgObj);
+    const idx = resumeData.others.images.length - 1;
+    stagingImages.add(idx);
+    newlyAddedImages.add(idx);
+    syncJsonEditor();
+    addImageOverlay(imgObj, idx, 'staging');
+  };
+  reader.readAsDataURL(file);
+});
+
+function syncJsonEditor() {
+  $('json-input').value = JSON.stringify(resumeData, null, 2);
+}
+
+// Apply: bake ALL images into PDF, mark all committed
+async function applyImages() {
+  if (!resumeData) return;
+  syncJsonEditor();
+  showLoading(true, 'Applying image…');
+  try {
+    const color = $('accent-color').value;
+    const res = await fetch('/render-pdf', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data: resumeData, color })
+    });
+    const result = await res.json();
+    if (!result.success) { showError(result.error); return; }
+
+    currentB64  = result.pdf_b64;
+    currentFile = result.filename;
+    zones       = result.zones || [];
+    pdfNativeW  = result.pdf_w || 595.28;
+    pdfNativeH  = result.pdf_h || 841.89;
+    numPages    = result.num_pages || 1;
+
+    // All images now committed
+    const total = resumeData.others?.images?.length || 0;
+    committedImages  = new Set([...Array(total).keys()]);
+    stagingImages    = new Set();
+    newlyAddedImages = new Set();
+
+    // Re-render canvas so images are visible baked in
+    pdfDoc = await pdfjsLib.getDocument({ data: b64ToBytes(result.pdf_b64) }).promise;
+
+    // Remove all overlays, then re-render pages (which will re-add committed overlays)
+    document.querySelectorAll('.pdf-img-overlay').forEach(el => el.remove());
+    await renderAllPages();
+
+    // Deselect all
+    document.querySelectorAll('.pdf-img-overlay.selected').forEach(el => el.classList.remove('selected'));
+
+  } catch(e) { showError('Apply error: ' + e.message); }
+  finally { showLoading(false); }
+}
+
+function b64ToBytes(b64) {
+  const raw = atob(b64);
+  const bytes = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+  return bytes;
+}
+
+// Discard: remove newly-added images, leave committed ones
+function discardStagingImages() {
+  // Remove purely new (never committed) images from data
+  const toRemove = [...newlyAddedImages].sort((a,b) => b-a);
+  toRemove.forEach(idx => {
+    resumeData.others.images.splice(idx, 1);
+    committedImages.delete(idx);
+  });
+  // Re-index committed
+  const newCommitted = new Set();
+  committedImages.forEach(idx => {
+    const shifted = toRemove.filter(r => r < idx).length;
+    newCommitted.add(idx - shifted);
+  });
+  committedImages  = newCommitted;
+  stagingImages    = new Set();
+  newlyAddedImages = new Set();
+  document.querySelectorAll('.pdf-img-overlay').forEach(el => el.remove());
+  syncJsonEditor();
+}
+
+// Restore committed image overlays after a canvas re-render
+function restoreImageOverlays() {
+  if (!resumeData?.others?.images?.length) return;
+  resumeData.others.images.forEach((img, idx) => {
+    const state = committedImages.has(idx) ? 'committed' : 'staging';
+    addImageOverlay(img, idx, state);
+  });
+}
+
+function addImageOverlay(imgObj, imgIdx, state) {
+  const scroll = $('preview-scroll');
+  const container = scroll.querySelector(`.page-container[data-page="${imgObj.page || 1}"]`);
+  if (!container) return;
+  const overlay = container.querySelector('.page-overlay');
+
+  // Don't duplicate
+  if (overlay.querySelector(`.pdf-img-overlay[data-img-idx="${imgIdx}"]`)) return;
+
+  const div = document.createElement('div');
+  div.className = 'pdf-img-overlay' + (state === 'committed' ? ' committed' : ' staging');
+  div.dataset.imgIdx = imgIdx;
+
+  const lx = imgObj.x * logicalScale;
+  const ly = (pdfNativeH - imgObj.y - imgObj.h) * logicalScale;
+  div.style.left   = lx + 'px';
+  div.style.top    = ly + 'px';
+  div.style.width  = (imgObj.w * logicalScale) + 'px';
+  div.style.height = (imgObj.h * logicalScale) + 'px';
+
+  const img = document.createElement('img');
+  const mime = imgObj.src_b64.startsWith('/9j/') ? 'image/jpeg' : 'image/png';
+  img.src = `data:${mime};base64,${imgObj.src_b64}`;
+  div.appendChild(img);
+
+  // Resize handle
+  const rh = document.createElement('div');
+  rh.className = 'img-resize-handle';
+  div.appendChild(rh);
+
+  // Delete button (removes from data entirely)
+  const del = document.createElement('button');
+  del.className = 'img-delete-btn';
+  del.textContent = '×';
+  del.title = 'Delete image';
+  del.addEventListener('click', async e => {
+    e.stopPropagation();
+    const idx = parseInt(div.dataset.imgIdx);
+    resumeData.others.images.splice(idx, 1);
+    // Re-index all sets
+    const reindex = set => {
+      const n = new Set();
+      set.forEach(i => { if (i !== idx) n.add(i > idx ? i-1 : i); });
+      return n;
+    };
+    committedImages  = reindex(committedImages);
+    stagingImages    = reindex(stagingImages);
+    newlyAddedImages = reindex(newlyAddedImages);
+    // Re-index other overlays
+    document.querySelectorAll('.pdf-img-overlay').forEach(el => {
+      const i = parseInt(el.dataset.imgIdx);
+      if (i > idx) el.dataset.imgIdx = i - 1;
+    });
+    div.remove();
+    syncJsonEditor();
+    // If was committed, re-render canvas to remove it from PDF
+    if (committedImages.size === 0 && !resumeData.others?.images?.length) return;
+    // Quick re-render to bake deletion
+    await applyImages();
+  });
+  div.appendChild(del);
+
+  // Apply button
+  const vb = document.createElement('button');
+  vb.className = 'img-validate-btn';
+  vb.textContent = '✓ Apply';
+  vb.addEventListener('click', async e => { e.stopPropagation(); await applyImages(); });
+  div.appendChild(vb);
+
+  // Click: if committed → move back to staging (removes from canvas, allows repositioning)
+  //        if staging → just select
+  div.addEventListener('mousedown', e => {
+    if (!editMode) return;
+    if (['img-resize-handle','img-delete-btn','img-validate-btn'].some(cls => e.target.classList.contains(cls))) return;
+
+    document.querySelectorAll('.pdf-img-overlay.selected').forEach(el => el.classList.remove('selected'));
+    div.classList.add('selected');
+
+    const idx = parseInt(div.dataset.imgIdx);
+    if (committedImages.has(idx)) {
+      // Move back to staging: remove from committed, add to staging
+      committedImages.delete(idx);
+      stagingImages.add(idx);
+      div.classList.remove('committed');
+      div.classList.add('staging');
+    }
+  });
+
+  makeDraggable(div, imgIdx);
+  makeResizable(rh, div, imgIdx);
+
+  overlay.appendChild(div);
+}
+
+function makeDraggable(div, imgIdx) {
+  div.addEventListener('mousedown', e => {
+    if (!editMode) return;
+    if (['img-resize-handle','img-delete-btn','img-validate-btn'].some(cls => e.target.classList.contains(cls))) return;
+    e.preventDefault();
+    let startX = e.clientX, startY = e.clientY;
+    let startLeft = parseFloat(div.style.left), startTop = parseFloat(div.style.top);
+    let curContainer = div.parentElement.parentElement;
+
+    function onMove(e) {
+      const dx = e.clientX - startX, dy = e.clientY - startY;
+      let nl = startLeft + dx, nt = startTop + dy;
+      const cH = parseFloat(curContainer.style.height);
+      const iH = parseFloat(div.style.height), iW = parseFloat(div.style.width);
+      const scroll = $('preview-scroll');
+      if (nl < -iW*0.5 || nl > parseFloat(curContainer.style.width) - iW*0.5 ||
+          nt < -iH*0.5 || nt > cH - iH*0.5) {
+        const sr = scroll.getBoundingClientRect();
+        const absY = e.clientY - sr.top + scroll.scrollTop;
+        let target = null;
+        scroll.querySelectorAll('.page-container').forEach(pc => {
+          if (absY >= pc.offsetTop && absY <= pc.offsetTop + pc.offsetHeight) target = pc;
+        });
+        if (target && target !== curContainer) {
+          target.querySelector('.page-overlay').appendChild(div);
+          resumeData.others.images[imgIdx].page = parseInt(target.dataset.page);
+          const tr = target.getBoundingClientRect();
+          nl = e.clientX - tr.left - iW/2;
+          nt = e.clientY - tr.top  - iH/2;
+          curContainer = target;
+          startX = e.clientX; startY = e.clientY; startLeft = nl; startTop = nt;
+        }
+      }
+      div.style.left = nl + 'px'; div.style.top = nt + 'px';
+      resumeData.others.images[imgIdx].x = nl / logicalScale;
+      resumeData.others.images[imgIdx].y = pdfNativeH - (nt / logicalScale) - resumeData.others.images[imgIdx].h;
+      syncJsonEditor();
+    }
+    function onUp() {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    }
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
+}
+
+function makeResizable(handle, div, imgIdx) {
+  handle.addEventListener('mousedown', e => {
+    if (!editMode) return;
+    e.preventDefault(); e.stopPropagation();
+    const startX = e.clientX, startY = e.clientY;
+    const startSize = parseFloat(div.style.width); // always square w=h
+    function onMove(e) {
+      const delta = Math.max(e.clientX - startX, e.clientY - startY);
+      const ns = Math.max(20, startSize + delta);
+      div.style.width = ns + 'px'; div.style.height = ns + 'px';
+      const ps = ns / logicalScale;
+      resumeData.others.images[imgIdx].w = ps;
+      resumeData.others.images[imgIdx].h = ps;
+      resumeData.others.images[imgIdx].y = pdfNativeH - (parseFloat(div.style.top)/logicalScale) - ps;
+      syncJsonEditor();
+    }
+    function onUp() {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    }
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
+}
+
+// ── UTILS ──────────────────────────────────────────────────────────────────
+function showError(msg) {
+  const el = $('error-msg');
+  el.textContent = '⚠ ' + msg;
+  el.style.display = 'block';
+}
+function clearError() { $('error-msg').style.display = 'none'; }
+function showLoading(show, msg = '') {
+  $('loading').classList.toggle('show', show);
+  if (msg) $('loading-msg').textContent = msg;
+}
+</script>
+</body>
+</html>

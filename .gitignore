@@ -1,0 +1,23 @@
+# Virtual environments
+.resuflow/
+venv/
+env/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# OS files
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# Build / temp
+*.log
+*.tmp
+
+# Optional: ignore generated files
+*.docx
+*.pdf

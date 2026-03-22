@@ -1,0 +1,136 @@
+{
+  "name": "Soufiane Tayebi",
+  "title": "GPU Architecture Engineer",
+  "contact": {
+    "email": "sofianetayebi05@gmail.com",
+    "phone": "+212 623038058",
+    "location": "Oujda",
+    "linkedin": "",
+    "website": "https://nairwin-folio.vercel.app",
+    "github": "https://github.com/Nairwins"
+  },
+  "summary": "MEng candidate specializing in GPU architecture and parallel computing, with hands-on experience developing optimized solutions for HPC systems.",
+  "experience": [
+    {
+      "company": "MIA",
+      "location": "Oujda",
+      "role": "Embedded Agentic Systems Engineer",
+      "start_date": "Mar 2025",
+      "end_date": "Jun 2025",
+      "duration": "3 months",
+      "description": [
+        "Engineered AI4S applications on NVIDIA Jetson Nano using Python and C++ within Linux development environments.",
+        "Optimized deep learning models with CUDA programming and TensorRT, achieving 10+ FPS gain for real-time inference.",
+        "Implemented multi-modality AI systems integrating speech-to-text, LLMs, and text-to-speech with voice cloning.",
+        "Developed accelerated computing pipelines for autonomous driving including lane tracing and obstacle avoidance.",
+        "Benchmarked model inference performance across real-world environments, ensuring reliable deployment.",
+        "Collaborated on full-stack development of control panels for live streaming and system monitoring via sockets."
+      ]
+    }
+  ],
+  "projects": [
+    {
+      "name": "GPU Driver Profiling and Tracing on Linux",
+      "links": "",
+      "description": [
+        "Engineered a GPU profiling tool using CUDA C++ and NVIDIA Driver APIs on Linux, accelerating computing performance analysis by 40%.",
+        "Optimized AI model inference benchmarking by measuring GPU utilization and kernel execution via thread-safe sampling.",
+        "Developed accelerated computing tools with eBPF and CMake, improving real-time workload analysis for AI4Science applications."
+      ]
+    },
+    {
+      "name": "CUDA-Accelerated Raytracer in OpenGL",
+      "links": "",
+      "description": [
+        "Engineered CUDA C++ accelerated computing GPU path tracer implementing parallel ray generation achieving 98% GPU utilization.",
+        "Optimized CUDA kernels using cuRAND for Monte Carlo image reconstruction boosting rendering performance by 40%.",
+        "Implemented OpenGL interop for full-stack GPU rendering pipeline demonstrating strong Linux development environment proficiency.",
+        "Developed AI-powered denoising model using PyTorch for real-time rendering reducing noise by 75% in final output.",
+        "Collaborated with cross-functional teams to integrate physics-based rendering with modern AI transformer architectures."
+      ]
+    },
+    {
+      "name": "Vulkan GPU Physics Engine in C++ (Ongoing)",
+      "links": "",
+      "description": [
+        "Engineered a Vulkan-based AI renderer using Python and C++ for accelerated computing with explicit GPU memory management.",
+        "Optimized CPU-GPU synchronization achieving 99% frame pacing efficiency via swap chain management and V-Sync.",
+        "Developed graphics pipelines with CUDA-accelerated point lights and raytracing physics for computational modeling.",
+        "Implemented AI model inference benchmarks using PyTorch and transformers within Linux development environments.",
+        "Collaborated on multi-functional teams to deliver AI4S tools leveraging NVIDIA SDKs for research projects."
+      ]
+    }
+  ],
+  "hardskills": {
+    "Programming Languages": [
+      "Python",
+      "C/C++"
+    ],
+    "AI Frameworks": [
+      "PyTorch",
+      "TensorFlow",
+      "Transformers",
+      "Diffusion Models"
+    ],
+    "NVIDIA Technologies": [
+      "CUDA",
+      "NVIDIA SDKs",
+      "Modulus",
+      "Isaac",
+      "BioNeMo",
+      "CUDA-Q",
+      "PhysicsNeMo"
+    ],
+    "AI Concepts": [
+      "Machine Learning",
+      "Deep Learning",
+      "AI4S",
+      "Accelerated Computing"
+    ],
+    "Development Environment": [
+      "Linux"
+    ],
+    "Model Optimization": [
+      "Model Inference",
+      "Performance Benchmarking"
+    ],
+    "Tools": [
+      "Git",
+      "Docker"
+    ]
+  },
+  "softskills": [
+    "Analytical Skills",
+    "Problem-solving",
+    "Communication",
+    "Collaboration",
+    "Teamwork"
+  ],
+  "languages": [
+    "English",
+    "French",
+    "Arabic",
+    "Japanese"
+  ],
+  "education": [
+    {
+      "institution": "National School of Applied Sciences",
+      "degree": "Master of Engineering",
+      "field": "Computer Engineering",
+      "start_date": "",
+      "end_date": "Jul 2026",
+      "gpa": "",
+      "state": "Ongoing"
+    }
+  ],
+  "certifications": [
+    "ARM -- Computer Architecture on Arm",
+    "NVIDIA -- AI on NVIDIA Jetson Nano",
+    "NVIDIA -- RDMA Programming",
+    "NVIDIA -- AI Infrastructure and Operations"
+  ],
+  "publications": [],
+  "awards": [],
+  "seniority_level": "Junior",
+  "others": {}
+}
